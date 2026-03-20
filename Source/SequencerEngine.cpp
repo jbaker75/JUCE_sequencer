@@ -2,11 +2,12 @@
 
 SequencerEngine::SequencerEngine()
 {
-    // Initialize pattern with defaults
+    // Set to 15 so the first advanceStep() in play() lands on Step 0
+    currentStep = 15;
+
     for (auto& step : pattern)
     {
         step.noteOffset = 0;
-        step.gate = false;
         step.gate = false;
     }
 }
@@ -14,7 +15,7 @@ SequencerEngine::SequencerEngine()
 SequencerEngine::~SequencerEngine()
 {
     stopTimer();
-    sendNoteOff(); // Ensure silence on destruction
+    sendNoteOff();
 }
 
 // --- Transport ---
@@ -24,6 +25,11 @@ void SequencerEngine::play()
     if (playing) return;
     
     playing = true;
+    
+    // Start by playing the "next" step immediately (Step 0 if reset)
+    advanceStep();
+    
+    // Then start the timer for the steps that follow
     updateTimerInterval();
 }
 
@@ -32,16 +38,20 @@ void SequencerEngine::stop()
     stopTimer();
     sendNoteOff();
     playing = false;
-    // We don't necessarily reset the step on stop, usually pause behavior.
-    // Use reset() for that.
 }
 
 void SequencerEngine::reset()
 {
     stop();
-    currentStep = 0;
-    // Notify UI of reset if needed
-    if (stepCallback) stepCallback(0);
+    // Set to 15 so the first advanceStep() in play() lands on Step 0
+    currentStep = 15;
+    
+    if (stepCallback)
+    {
+        juce::MessageManager::callAsync([this]() {
+             if (stepCallback) stepCallback(0); 
+        });
+    }
 }
 
 bool SequencerEngine::isPlaying() const
@@ -110,9 +120,6 @@ void SequencerEngine::setStepCallback(StepCallback callback)
 
 void SequencerEngine::updateTimerInterval()
 {
-    // 16th notes: 4 steps per beat.
-    // MS per beat = 60000 / BPM
-    // MS per step = (60000 / BPM) / 4
     double msPerStep = (60000.0 / bpm) / 4.0;
     startTimer(static_cast<int>(msPerStep));
 }
@@ -122,46 +129,39 @@ void SequencerEngine::sendNoteOff()
     if (lastNotePlayed != -1)
     {
         if (midiCallback)
-        {
-            // Send NoteOff on channel 1
             midiCallback(juce::MidiMessage::noteOff(1, lastNotePlayed));
-        }
         lastNotePlayed = -1;
     }
 }
 
 void SequencerEngine::hiResTimerCallback()
 {
-    // 1. Silence previous note
+    advanceStep();
+}
+
+void SequencerEngine::advanceStep()
+{
+    // 1. Silence previous
     sendNoteOff();
 
-    // 2. Advance Step
+    // 2. Advance
     currentStep = (currentStep + 1) % 16;
 
-    // 3. Notify UI (on message thread usually, but callbacks here are direct)
-    // Note: The UI update should be async to not block the timer, 
-    // but for simple visual feedback, a direct atomic/flag check or 
-    // using juce::MessageManager::callAsync is safer if the callback touches UI.
+    // 3. UI Callback
     if (stepCallback)
     {
-        // Execute on message thread for UI safety
         juce::MessageManager::callAsync([this, step = currentStep]() {
              if (stepCallback) stepCallback(step); 
         });
     }
 
-    // 4. Play New Note
+    // 4. Play New
     const auto& step = pattern[currentStep];
     if (step.gate)
     {
-        int noteToPlay = baseNote + step.noteOffset;
-        noteToPlay = juce::jlimit(0, 127, noteToPlay);
-        
+        int noteToPlay = juce::jlimit(0, 127, baseNote + step.noteOffset);
         lastNotePlayed = noteToPlay;
         if (midiCallback)
-        {
-            // Note On, Channel 1, Velocity 100
             midiCallback(juce::MidiMessage::noteOn(1, lastNotePlayed, (juce::uint8)100));
-        }
     }
 }

@@ -71,4 +71,5 @@ private:
 
     void updateTimerInterval();
     void sendNoteOff();
+    void advanceStep();
 };
