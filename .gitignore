@@ -1,0 +1,23 @@
+/* IDE-specific */
+.vscode/
+.idea/
+*.swp
+*.swo
+
+/* JUCE-specific (These are usually generated) */
+Builds/
+JuceLibraryCode/
+
+/* Build artifacts */
+bin/
+obj/
+*.o
+*.obj
+*.pdb
+*.suo
+*.user
+*.ncb
+*.vcproj
+*.sln
+*.vcxproj
+*.filters
