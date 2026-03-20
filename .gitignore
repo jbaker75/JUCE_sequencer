@@ -4,9 +4,16 @@
 *.swp
 *.swo
 
+/* CMake build directory */
+build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+
 /* JUCE-specific (These are usually generated) */
 Builds/
 JuceLibraryCode/
+JUCE_sequencer_artefacts/
 
 /* Build artifacts */
 bin/

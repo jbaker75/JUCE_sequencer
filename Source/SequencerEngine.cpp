@@ -7,6 +7,7 @@ SequencerEngine::SequencerEngine()
     {
         step.noteOffset = 0;
         step.gate = false;
+        step.gate = false;
     }
 }
 
