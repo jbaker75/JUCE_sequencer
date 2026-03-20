@@ -8,6 +8,7 @@ StepColumn::StepColumn(int stepNumber) : stepId(stepNumber)
     pitchSlider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
     pitchSlider.setRange(-12, 12, 1);
     pitchSlider.setValue(0);
+    pitchSlider.setValue(0);
     pitchSlider.onValueChange = [this] {
         valueLabel.setText(juce::String((int)pitchSlider.getValue()), juce::dontSendNotification);
         if (onValueChange) onValueChange();
